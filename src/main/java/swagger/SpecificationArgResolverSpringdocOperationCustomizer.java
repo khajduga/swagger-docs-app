@@ -76,7 +76,10 @@ public class SpecificationArgResolverSpringdocOperationCustomizer implements Ope
 	}
 
 	private boolean annotationContainsNestedSpecification(Annotation annotation) {
-		return annotation.annotationType() == And.class || annotation.annotationType() == Or.class;
+		return annotation.annotationType() == Conjunction.class ||
+				annotation.annotationType() == Disjunction.class ||
+				annotation.annotationType() == And.class ||
+				annotation.annotationType() == Or.class;
 	}
 
 	private List<Parameter> createParameter(Spec spec, Map<String, String> joinMap, List<String> requiredParameters) {
