@@ -13,6 +13,7 @@ import org.springframework.web.method.HandlerMethod;
 
 import java.lang.annotation.Annotation;
 import java.util.*;
+import java.util.function.Function;
 
 import static java.util.Arrays.asList;
 import static java.util.Arrays.stream;
@@ -26,6 +27,13 @@ public class SpecificationArgResolverSpringdocOperationCustomizer implements Ope
 	static {
 		SpringDocUtils.getConfig().addRequestWrapperToIgnore(Specification.class);
 	}
+
+	private final Map<Class<?>, Function<Annotation, List<Spec>>> nestedSpecAnnotationSuppliers = Map.of(
+			And.class, annotation -> extractSpecificationsFromAnd((And) annotation),
+			Or.class, annotation -> extractSpecificationsFromOr((Or) annotation),
+			Conjunction.class, annotation -> extractSpecificationsFromConjunction((Conjunction) annotation),
+			Disjunction.class, annotation -> extractSpecificationsFromDisjunction((Disjunction) annotation)
+	);
 
 	@Override
 	public Operation customize(Operation operation, HandlerMethod handlerMethod) {
@@ -42,7 +50,8 @@ public class SpecificationArgResolverSpringdocOperationCustomizer implements Ope
 				.collect(toList());
 
 		annotationsWithNestedSpec.stream()
-				.map(this::extractNestedSpecifications)
+				.map(this::extractNestedSpecificationsFromAnnotation)
+				.map(this::deduplicateSpecificationsByParameterName)
 				.flatMap(Collection::stream)
 				.map(spec -> createParameters(spec, requiredParameters))
 				.flatMap(Collection::stream)
@@ -56,18 +65,22 @@ public class SpecificationArgResolverSpringdocOperationCustomizer implements Ope
 				.anyMatch(parameterTypeInterface -> parameterTypeInterface == Specification.class);
 	}
 
-	private List<Spec> extractNestedSpecifications(Annotation annotationWithNestedSpecifications) {
-		if (annotationWithNestedSpecifications instanceof And) {
-			return extractSpecificationsFromAnd((And) annotationWithNestedSpecifications);
-		} else if (annotationWithNestedSpecifications instanceof Or) {
-			return extractSpecificationsFromOr((Or) annotationWithNestedSpecifications);
-		} else if (annotationWithNestedSpecifications instanceof Conjunction) {
-			return extractSpecificationsFromConjunction((Conjunction) annotationWithNestedSpecifications);
-		} else if (annotationWithNestedSpecifications instanceof Disjunction) {
-			return extractSpecificationsFromDisjunction((Disjunction) annotationWithNestedSpecifications);
+	private Collection<Spec> deduplicateSpecificationsByParameterName(List<Spec> specifications) {
+		Map<String, Spec> specificationByParameterName = new HashMap<>();
+		specifications.forEach(specification ->
+				stream(specification.params())
+						.forEach(param -> specificationByParameterName.putIfAbsent(param, specification)));
+
+		return specificationByParameterName.values();
+	}
+
+	private List<Spec> extractNestedSpecificationsFromAnnotation(Annotation annotation) {
+		if (!nestedSpecAnnotationSuppliers.containsKey(annotation.annotationType())) {
+			return emptyList();
 		}
 
-		return emptyList();
+		return nestedSpecAnnotationSuppliers.get(annotation.annotationType())
+				.apply(annotation);
 	}
 
 	private List<Spec> extractSpecificationsFromOr(Or or) {
@@ -91,7 +104,7 @@ public class SpecificationArgResolverSpringdocOperationCustomizer implements Ope
 	}
 
 	private List<Spec> extractSpecificationsFromDisjunction(Disjunction conjunction) {
-		List<Spec> disjunctionSpecifications =  new ArrayList<>(asList(conjunction.or()));
+		List<Spec> disjunctionSpecifications = new ArrayList<>(asList(conjunction.or()));
 
 		stream(conjunction.value())
 				.map(And::value)

@@ -10,7 +10,8 @@ import org.springframework.data.jpa.domain.Specification;
 
 @Conjunction(value = {
 		@Or({
-				@Spec(path = "lastName", params = "lastName", spec = Like.class)
+				@Spec(path = "lastName", params = "lastName", spec = Like.class),
+				@Spec(path = "firstName", params = "firstName", spec = Like.class),
 		})},
 		and = @Spec(path = "firstName", params = "firstName", spec = Equal.class))
 public interface NameSpecification extends Specification<Customer> {
