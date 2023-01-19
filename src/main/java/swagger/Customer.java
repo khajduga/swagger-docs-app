@@ -1,6 +1,6 @@
 package swagger;
 
-import javax.persistence.*;
+import jakarta.persistence.*;
 
 @Entity
 @Table(name = "customers")
@@ -16,13 +16,17 @@ public class Customer {
 	@Column(name = "last_name")
 	private String lastName;
 
+	@Column(name = "custom_id")
+	private String customId;
+
 	@Deprecated // only for hibernate
 	public Customer() {
 	}
 
-	public Customer(String firstName, String lastName) {
+	public Customer(String firstName, String lastName, String customId) {
 		this.firstName = firstName;
 		this.lastName = lastName;
+		this.customId = customId;
 	}
 
 	public String getFirstName() {
@@ -33,12 +37,17 @@ public class Customer {
 		return lastName;
 	}
 
+	public String getCustomId() {
+		return customId;
+	}
+
 	@Override
 	public String toString() {
 		return "Customer[" +
 				"id=" + id +
 				", firstName='" + firstName + '\'' +
 				", lastName='" + lastName + '\'' +
+				", customId='" + customId + '\'' +
 				']';
 	}
 }
