@@ -1,6 +1,6 @@
 package swagger;
 
-import jakarta.persistence.*;
+import javax.persistence.*;
 
 @Entity
 @Table(name = "customers")
